@@ -1,15 +1,9 @@
 import numpy as np
 import xarray as xr 
+from misc import x_step
 # import matplotlib.pyplot as plt
-# from scipy.signal._spectral_py import _spectral_helper as cross_spec
+from scipy.signal._spectral_py import _spectral_helper as cross_spec
 # from uncertainties import unumpy, ufloat
-
-
-#------------Auxillary--------------
-def x_step(array):
-    x, = array.coords
-    dx = float(array[x][1] - array[x][0])
-    return dx
 
 
 #------------Preprocessing/Filtering----------------
@@ -73,41 +67,50 @@ def minimize_leakage(array, f_slice):
 
     return result
 
-# def welch(x, fs, detrend='linear', nperseg=None, window='hann', noverlap=None):
-    
-#     freq, time, Pxx = cross_spec(x, x, fs, window=window, detrend=detrend, nperseg=nperseg, noverlap=noverlap)
 
-#     if noverlap is None:
-#         variance_reduction = 9*len(time)/11
-#     elif noverlap == 0:
-#         variance_reduction = len(time)
-#     else:
-#         raise ValueError('noverlap should be None or 0')
+def welch(array, detrend='constant', nperseg=None, window='hann', noverlap=None):
+
+    freq, time, Pxx = cross_spec(array, array, 1/x_step(array), 
+                                 window=window, 
+                                 detrend=detrend, 
+                                 nperseg=nperseg, 
+                                 noverlap=noverlap)
+
+    if noverlap is None:
+        variance_reduction = 9*len(time)/11
+    elif noverlap == 0:
+        variance_reduction = len(time)
+    else:
+        raise ValueError('noverlap should be None or 0')
     
-#     Pxx_darray = xr.DataArray(Pxx, coords={'f': freq, 't': time}, dims=('f', 't'))
+    Pxx_darray = xr.DataArray(Pxx, coords={'f': freq, 't': time}, dims=('f', 't'))
     
-#     return xr.Dataset({'P': Pxx_darray, 
-#                        'P_mean': Pxx_darray.mean('t'),
-#                        'P_sem': Pxx_darray.std('t') / np.sqrt(variance_reduction)})
+    return xr.Dataset({'P': Pxx_darray, 
+                       'P_mean': Pxx_darray.mean('t'),
+                       'P_sem': Pxx_darray.std('t') / np.sqrt(variance_reduction)})
 
 
 #------------Spectral Analysis Two Traces---------------
 
-# def cross_spectrum(x, y, fs, detrend='linear', nperseg=None):
+def cross_spectrum(array1, array2, detrend='constant', nperseg=None):
     
-#     freq, time, Pxy = cross_spec(x, y, fs, window='hann', detrend=detrend, nperseg=nperseg)
-#     variance_reduction = 9*len(time)/11
+    freq, time, Pxy = cross_spec(array1, array2, 1/x_step(array1), 
+                                 window='hann', 
+                                 detrend=detrend, 
+                                 nperseg=nperseg)
     
-#     Pxy_darray = xr.DataArray(Pxy, coords={'f': freq, 't': time}, dims=('f', 't'))
+    variance_reduction = 9*len(time)/11
     
-#     Pxy_mag = xr.apply_ufunc(np.abs, Pxy_darray)
-#     Pxy_phase = xr.apply_ufunc(np.angle, Pxy_darray)
+    Pxy_darray = xr.DataArray(Pxy, coords={'f': freq, 't': time}, dims=('f', 't'))
     
-#     return xr.Dataset({'P_mag': Pxy_mag, 
-#                        'P_mag_mean': Pxy_mag.mean('t'),
-#                        'P_mag_sem': Pxy_mag.std('t') / np.sqrt(variance_reduction),
-#                        'P_phase_mean': Pxy_phase.mean('t'),
-#                        'P_phase_sem': Pxy_phase.std('t') / np.sqrt(variance_reduction)})
+    Pxy_mag = xr.apply_ufunc(np.abs, Pxy_darray)
+    Pxy_phase = xr.apply_ufunc(np.angle, Pxy_darray)
+    
+    return xr.Dataset({'P_mag': Pxy_mag, 
+                       'P_mag_mean': Pxy_mag.mean('t'),
+                       'P_mag_sem': Pxy_mag.std('t') / np.sqrt(variance_reduction),
+                       'P_phase_mean': Pxy_phase.mean('t'),
+                       'P_phase_sem': Pxy_phase.std('t') / np.sqrt(variance_reduction)})
 
 
 
@@ -200,33 +203,5 @@ def minimize_leakage(array, f_slice):
 #     print(f'Corrected delay = {delay - delay_correction:.3f} ms')
 
 #     return dict(phase_delay=ufloat(phi, err), delay=delay, corrected_delay=delay - delay_correction)
-
-
-# def phase_wrap(trace, period, phase=None):
-    
-#     dt = float(trace.t[1] - trace.t[0])
-    
-#     if phase is None:
-#         result = xr.DataArray(trace, coords={'t': trace.t%period})
-#     else:
-#         result = xr.DataArray(trace.roll(t=-int((phase)//dt)), coords={'t': trace.t%period})
-    
-#     return result
-    
-
-# def aver_bins(trace, nbins=20): 
-
-#     t = trace.t.groupby_bins('t', bins=nbins).mean().values
-
-#     trace_std = trace.groupby_bins('t', bins=nbins, labels=t).std()
-#     trace_count = trace.groupby_bins('t', bins=nbins, labels=t).count()
-    
-#     result = xr.Dataset({'aver': trace.groupby_bins('t', bins=nbins, labels=t).mean(),
-#                       'n': trace_count,
-#                       'sem': trace_std/np.sqrt(trace_count)},
-#                       )
-    
-#     return result.rename(t_bins='t')
-
 
 
