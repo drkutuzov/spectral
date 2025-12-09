@@ -1,6 +1,7 @@
 import numpy as np
 import xarray as xr 
-from misc import x_step
+from misc import x_step, weighted_average
+from uncertainties import ufloat
 from scipy.signal._spectral_py import _spectral_helper as cross_spec
 
 
@@ -129,6 +130,22 @@ def cross_spectrum(array1, array2, detrend='constant', nperseg=None):
                        'P_phase_sem': Pxy_phase.std('t') / np.sqrt(variance_reduction)})
 
 
+def phase_shift(freq_range, spectrum, delay_correction=0.0):
+
+    peak = spectrum.sel(f=slice(*freq_range))
+    freq = float(peak.f[int(peak.P_mag_mean.argmax())])
+
+    phi, err = weighted_average(peak.P_phase_mean.values, peak.P_phase_sem.values)
+    
+    delay = ufloat(1e3/freq * phi/2/np.pi, 1e3/freq * err/2/np.pi)
+
+    print(f'Frequency = {freq:.1f} Hz')
+    print(f'phase_shift = {ufloat(phi, err):.3f} rad')
+    print(f'Delay = {delay:.3f} ms')
+    print(f'Corrected delay = {delay - delay_correction:.3f} ms')
+
+    return dict(phase_delay=ufloat(phi, err), delay=delay, corrected_delay=delay - delay_correction)
+
 
 # def transfer_function(x, y, window='hann', detrend='linear', nperseg=None, noverlap=None):
     
@@ -204,20 +221,6 @@ def cross_spectrum(array1, array2, detrend='constant', nperseg=None):
 #                        })
 
 
-# def phase_shift(freq_range, spectrum, delay_correction=0.0):
 
-#     peak = spectrum.sel(f=slice(*freq_range))
-#     freq = float(peak.f[int(peak.P_mag_mean.argmax())])
-
-#     phi, err = misc.weighted_average(peak.P_phase_mean.values, peak.P_phase_sem.values)
-    
-#     delay = ufloat(1e3/freq * phi/2/np.pi, 1e3/freq * err/2/np.pi)
-
-#     print(f'Frequency = {freq:.1f} Hz')
-#     print(f'phase_shift = {ufloat(phi, err):.3f} rad')
-#     print(f'Delay = {delay:.3f} ms')
-#     print(f'Corrected delay = {delay - delay_correction:.3f} ms')
-
-#     return dict(phase_delay=ufloat(phi, err), delay=delay, corrected_delay=delay - delay_correction)
 
 
