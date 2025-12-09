@@ -7,14 +7,32 @@ from scipy.signal._spectral_py import _spectral_helper as cross_spec
 #------------Preprocessing/Filtering----------------
 def high_pass_filt(x, lowest_freq):
 
-    dt = float(x.t[1] - x.t[0])
+    dx = x_step(x)
     x_fft = np.fft.fft(x)
-    freq = np.linspace(0, 1/dt, x.t.size)
+    freq = np.linspace(0, 1/dx, x.size)
     
     x_fft[freq < lowest_freq] = 0
     x_fft[freq > freq[-1] - lowest_freq] = 0
 
     return xr.DataArray(np.real(np.fft.ifft(x_fft)), coords=x.coords)
+
+
+def low_pass_filt(x, highest_freq):
+
+    dx = x_step(x)
+    x_fft = np.fft.fft(x)
+    freq = np.linspace(0, 1/dx, x.size)
+
+    freq_mask = (freq > highest_freq) * (freq < freq[-1] - highest_freq)
+    
+    x_fft[freq_mask] = 0
+
+    return xr.DataArray(np.real(np.fft.ifft(x_fft)), coords=x.coords)
+
+
+def band_pass_filt(x, lowest_freq, highest_freq):
+    
+    return high_pass_filt(low_pass_filt(x, highest_freq), lowest_freq)
 
 
 #------------Spectral Analysis Single Trace---------------
