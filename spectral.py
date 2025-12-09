@@ -1,9 +1,7 @@
 import numpy as np
 import xarray as xr 
 from misc import x_step
-# import matplotlib.pyplot as plt
 from scipy.signal._spectral_py import _spectral_helper as cross_spec
-# from uncertainties import unumpy, ufloat
 
 
 #------------Preprocessing/Filtering----------------
