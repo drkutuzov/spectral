@@ -1,5 +1,7 @@
 import numpy as np
 import xarray as xr 
+import spectral
+import matplotlib.pyplot as plt
 from uncertainties import ufloat, unumpy
 
 
@@ -34,6 +36,15 @@ def phase_wrap(trace, period, phase=None):
         result = xr.DataArray(trace.roll(t=-int((phase)//dt)), coords={'t': trace.t%period})
     
     return result
+
+
+def get_single_periods(array, freq, freq_threshold):
+
+    t = [None, *freq.t.values, None]
+
+    single_periods = [phase_wrap(spectral.high_pass_filt(array, freq_threshold).sel(t=slice(t[i], t[i+2])), 1/fh) for (i, fh) in zip(range(len(t) - 2), freq)]
+
+    return single_periods
     
 
 def aver_bins(trace, nbins=20): 
@@ -49,6 +60,7 @@ def aver_bins(trace, nbins=20):
                       )
     
     return result.rename(t_bins='t')
+
 
 
 def block_aver_darray(darray, n, boundary='pad'):
@@ -78,3 +90,15 @@ def savgol_filt(array, window_length, polyorder, **kwgs):
                              **kwgs)
 
     return xr.DataArray(x_low_pass, coords=array.coords)
+
+
+def plot_single_period(array, roll, nbins, ax=None, kwgs_raw={}, kwgs_aver={}):
+
+    x, = array.dims
+    array_rolled = array.roll(**{x: roll})
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    array_rolled.plot(ax=ax, ls='', marker='.', **kwgs_raw)
+    aver_bins(array_rolled, nbins).aver.plot(ls='-', marker='', **kwgs_aver)
